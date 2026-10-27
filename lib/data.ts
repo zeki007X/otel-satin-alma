@@ -52,6 +52,9 @@ export const tedarikciler: Tedarikci[] = [
   },
   { id: "marmara-amenity", ad: "Marmara Amenity", sehir: "İstanbul", kategori: ["buklet"], siparisSayisi: 6, puan: 4.4 },
   { id: "toros-kozmetik", ad: "Toros Kozmetik", sehir: "Mersin", kategori: ["buklet"], siparisSayisi: 3, puan: 4.2 },
+  { id: "anadolu-porselen", ad: "Anadolu Porselen", sehir: "Kütahya", kategori: ["fb"], siparisSayisi: 6, puan: 4.6, sonSiparis: "Şubat 2026" },
+  { id: "cam-dunyasi", ad: "Cam Dünyası", sehir: "İstanbul", kategori: ["fb"], siparisSayisi: 4, puan: 4.4 },
+  { id: "akdeniz-hijyen", ad: "Akdeniz Hijyen", sehir: "Antalya", kategori: ["temizlik"], siparisSayisi: 15, puan: 4.7, sonSiparis: "Ekim 2026" },
 ];
 
 export const tedarikciBul = (id: string) => tedarikciler.find((t) => t.id === id);

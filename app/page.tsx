@@ -71,7 +71,8 @@ export default function Panel() {
   const kpi = [
     { e: "Açık talepler", d: String(acik.length), a: `${buHafta} tanesi bu hafta kapanıyor` },
     { e: "Bekleyen teklif", d: String(bekleyen), a: `Davet edilen ${davetli} tedarikçiden` },
-    { e: "Onay bekleyen sipariş", d: String(satirlar.filter((s) => s.durum === "onay").length), a: "Genel müdür onayında" },
+    // Değer tarayıcıdaki sipariş verisinden PanelGovde'de hesaplanır
+    { e: "Onay bekleyen sipariş", d: "", a: "" },
     { e: "Bu ay sağlanan tasarruf", d: tl(tasarruf), a: "En pahalı tam teklif → seçilen teklif farkı" },
   ];
 

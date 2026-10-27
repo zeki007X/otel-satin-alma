@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { durumEtiket, type Durum } from "@/lib/data";
+import { useSiparisler } from "@/lib/siparis";
 
 export type PanelSatir = {
   id?: string; // ayrıntı ekranı olan talepler
@@ -49,6 +50,8 @@ export default function PanelGovde({
   satirlar: PanelSatir[];
   akis: AkisSatir[];
 }) {
+  const { siparisler } = useSiparisler();
+  const onayda = siparisler.filter((s) => s.durum === "onayda");
   const [arama, setArama] = useState("");
   const [filtre, setFiltre] = useState<Durum | null>(null);
 
@@ -84,8 +87,14 @@ export default function PanelGovde({
         {kpi.map((k) => (
           <div key={k.e} className="kart kpi">
             <span className="soluk" style={{ fontSize: 13 }}>{k.e}</span>
-            <span className="deger">{k.d}</span>
-            <span className="soluk" style={{ fontSize: 12 }}>{k.a}</span>
+            <span className="deger">{k.e === "Onay bekleyen sipariş" ? onayda.length : k.d}</span>
+            {k.e === "Onay bekleyen sipariş" ? (
+              <Link href="/onay" className="soluk" style={{ fontSize: 12 }}>
+                {onayda.length ? "Onay akışında gör →" : "Bekleyen onay yok"}
+              </Link>
+            ) : (
+              <span className="soluk" style={{ fontSize: 12 }}>{k.a}</span>
+            )}
           </div>
         ))}
       </section>

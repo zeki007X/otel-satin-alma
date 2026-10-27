@@ -1,7 +1,13 @@
 import OtelKabuk from "@/components/OtelKabuk";
 import { talepler, tedarikciler } from "@/lib/data";
 
-const KATEGORI: Record<string, string> = { ses: "Ses ve ışık sistemleri", tekstil: "Tekstil", buklet: "Banyo ürünleri" };
+const KATEGORI: Record<string, string> = {
+  ses: "Ses ve ışık sistemleri",
+  tekstil: "Tekstil",
+  buklet: "Banyo ürünleri",
+  fb: "F&B ekipman",
+  temizlik: "Housekeeping",
+};
 
 export default function Tedarikciler() {
   const gruplar = Object.entries(KATEGORI).map(([anahtar, ad]) => ({

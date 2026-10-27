@@ -5,6 +5,17 @@ import { useState } from "react";
 import { tl, tlFiyat, type Talep, type Tedarikci, type Teklif } from "@/lib/data";
 import { kararAnahtar, useKalemSartlari, useMuadilKararlari } from "@/lib/muadil";
 import { referansAd } from "@/lib/referans";
+import {
+  onayAdimlari,
+  siparisDurumEtiket,
+  siparisDurumRozet,
+  siparisToplam,
+  sirdakiAdim,
+  simdiMetin,
+  useSiparisler,
+  yeniSiparisNo,
+  type Siparis,
+} from "@/lib/siparis";
 
 type Mod = { tur: "enIyi" } | { tur: "tedarikci"; id: string } | { tur: "elle"; secim: Record<string, string> };
 
@@ -30,7 +41,7 @@ export default function Karsilastirma({
   const { kararlar } = useMuadilKararlari();
   const { sartlar } = useKalemSartlari();
   const [mod, setMod] = useState<Mod>({ tur: "enIyi" });
-  const [siparis, setSiparis] = useState(false);
+  const { siparisler, kaydet } = useSiparisler();
   const [pazarlik, setPazarlik] = useState(false);
   const [indirAcik, setIndirAcik] = useState(false);
   const [hatirlatildi, setHatirlatildi] = useState(false);
@@ -109,6 +120,45 @@ export default function Karsilastirma({
       aktif: mod.tur === "tedarikci" && mod.id === q.tedarikciId,
     })),
   ];
+
+  // Bu talepten oluşan, reddedilmemiş siparişler. Reddedilirse yeniden sipariş oluşturulabilir.
+  const talepSiparisleri = siparisler.filter((sp) => sp.talepId === talep.id && sp.durum !== "reddedildi");
+
+  const siparisOlustur = () => {
+    const yeniler: Siparis[] = kullanilan.map((tid, i) => {
+      const kalemler = tablo
+        .filter((r) => secim[r.k.id] === tid)
+        .map((r) => {
+          const h = r.hucreler.find((h) => h.tedarikciId === tid)!;
+          return {
+            ad: h.muadil ? `${r.k.ad} (muadil: ${h.model})` : r.k.ad,
+            miktar: r.k.miktar,
+            birim: r.k.birim,
+            birimFiyat: Math.round((h.fiyat ?? 0) * 100) / 100,
+          };
+        });
+      const no = yeniSiparisNo(siparisler, i);
+      return {
+        id: `${no}-${talep.id}`,
+        no,
+        talepId: talep.id,
+        talepNo: talep.no,
+        baslik: talep.baslik,
+        tedarikciId: tid,
+        kalemler,
+        olusturma: simdiMetin(),
+        olusturan: "Satın alma müdürü",
+        durum: "onayda",
+        adimlar: onayAdimlari(siparisToplam({ kalemler })),
+        not:
+          kullanilan.length > 1
+            ? `${kullanilan.length} tedarikçiye bölünmüş siparişin parçası` +
+              (enPahaliTam > 0 ? `; en pahalı tam teklife göre fark ${tl(enPahaliTam - secilenToplam)}.` : ".")
+            : undefined,
+      };
+    });
+    kaydet(...yeniler);
+  };
 
   // Seçime göre değişen karar notları
   const kararNotlari: React.ReactNode[] = [];
@@ -386,23 +436,33 @@ export default function Karsilastirma({
               </div>
             )}
           </div>
-          {!siparis ? (
-            <button className="btn btn-parlak" style={{ alignSelf: "flex-start", padding: "0 22px" }} onClick={() => setSiparis(true)} disabled={!kullanilan.length}>
+          {talepSiparisleri.length === 0 ? (
+            <button
+              className="btn btn-parlak"
+              style={{ alignSelf: "flex-start", padding: "0 22px" }}
+              onClick={siparisOlustur}
+              disabled={!kullanilan.length}
+            >
               Onaya gönder ve sipariş oluştur
             </button>
           ) : (
             <div className="bilgi basari" role="status" style={{ color: "#15202b" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <b>Sipariş taslakları oluşturuldu ve onaya gönderildi (demo).</b>
-                {kullanilan.map((id) => {
-                  const satirlar = tablo.filter((r) => secim[r.k.id] === id);
-                  return (
-                    <span key={id}>
-                      {ad(id)}: {satirlar.map((r) => r.k.ad).join(", ")} ·{" "}
-                      <span className="mono">{tl(satirlar.reduce((a, r) => a + satirTutar(r, id), 0))}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+                <b>Bu talepten {talepSiparisleri.length} sipariş oluşturuldu.</b>
+                {talepSiparisleri.map((sp) => (
+                  <span key={sp.id} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                    <Link href={`/onay?s=${sp.id}`} className="mono" style={{ fontWeight: 600 }}>
+                      {sp.no}
+                    </Link>
+                    {ad(sp.tedarikciId)} · <span className="mono">{tl(siparisToplam(sp))}</span>
+                    <span className={`rozet rozet-${siparisDurumRozet[sp.durum]}`}>
+                      {sp.durum === "onayda" ? `${sirdakiAdim(sp)?.rol} onayında` : siparisDurumEtiket[sp.durum]}
                     </span>
-                  );
-                })}
+                  </span>
+                ))}
+                <Link href="/onay" style={{ fontWeight: 600, fontSize: 13 }}>
+                  Onay akışına git →
+                </Link>
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSiparisler } from "@/lib/siparis";
 
 // href'i olmayanlar sonraki sürümde gelecek ekranlar.
 const menu: { href?: string; ad: string }[] = [
@@ -10,10 +11,10 @@ const menu: { href?: string; ad: string }[] = [
   { href: "/teklifler/18507", ad: "Gelen teklif dosyaları" },
   { href: "/karsilastirma/RFQ-2026-118", ad: "Karşılaştırmalar" },
   { href: "/muadil/18507/k1", ad: "Muadil değerlendirme" },
-  { ad: "Siparişler" },
+  { href: "/siparisler", ad: "Siparişler" },
+  { href: "/onay", ad: "Onay akışı" },
   { href: "/tedarikciler", ad: "Kayıtlı tedarikçiler" },
   { href: "/kutuphane", ad: "Ürün ve muadil kütüphanesi" },
-  { ad: "Onay akışı" },
   { ad: "Raporlar" },
 ];
 
@@ -22,6 +23,8 @@ const aktifMi = (yol: string, href: string) =>
 
 export default function OtelKabuk({ children, alt }: { children: React.ReactNode; alt?: React.ReactNode }) {
   const yol = usePathname();
+  const { siparisler } = useSiparisler();
+  const onayBekleyen = siparisler.filter((s) => s.durum === "onayda").length;
   return (
     <div className="kabuk">
       <nav className="yan" aria-label="Ana menü">
@@ -37,6 +40,11 @@ export default function OtelKabuk({ children, alt }: { children: React.ReactNode
             m.href ? (
               <Link key={m.ad} href={m.href} className={aktifMi(yol, m.href) ? "aktif" : ""}>
                 {m.ad}
+                {m.href === "/onay" && onayBekleyen > 0 && (
+                  <span className="sayac" aria-label={`${onayBekleyen} onay bekliyor`}>
+                    {onayBekleyen}
+                  </span>
+                )}
               </Link>
             ) : (
               <span key={m.ad} className="yakinda" aria-disabled="true">
