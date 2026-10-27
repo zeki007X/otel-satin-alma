@@ -6,15 +6,17 @@ Otellerin teklif toplama sürecini tek ekrana alan platformun ilk sürümü (Nex
 
 | Yol | Ekran |
 | --- | --- |
-| `/` | Satın alma paneli |
-| `/talepler/18507` | Teklif istek formu (kalem bazında "sadece bu model / muadil kabul", asgari teknik şartlar, tedarikçi seçimi) |
+| `/` | Satın alma paneli: özet kartlar, arama, durum filtresi, son gelen teklifler |
+| `/talepler/18507` | Teklif istek formu (kalem bazında "sadece bu model / muadil kabul", asgari teknik şartlar, kütüphaneden ürün ekleme, tedarikçi seçimi) |
 | `/talepler/yeni` | Yeni teklif talebi |
-| `/teklifler/18507` | Gelen teklifler: dosyadan okunan veri, eşleşme, hatırlatma |
-| `/karsilastirma/18507` | Fiyat karşılaştırma, kalem bazında seçim ve bölünmüş sipariş |
+| `/teklifler/18507` | Gelen teklif dosyaları: gelen cevaplar, orijinal dosya, sisteme aktarılan veri (düzeltilebilir) |
+| `/karsilastirma/RFQ-2026-118` | Fiyat karşılaştırma, kalem bazında seçim, bölünmüş sipariş, Excel (CSV) / PDF indirme |
 | `/muadil/18507/k1` | Muadil değerlendirme (RCF ART 912-A ↔ Yamaha DXR12mkII, HK Audio L3 112 FA, dB Technologies Opera 12) |
-| `/portal/18507?t=lara-muzik` | Tedarikçi portalı (tedarikçinin gördüğü teklif formu) |
+| `/portal/RFQ-2026-121?t=akdeniz-kozmetik` | Tedarikçi portalı (kör teklif, katalog fiyatlarıyla doldurma, kısmi teklif) |
+| `/tedarikciler` | Kayıtlı tedarikçiler |
+| `/kutuphane` | Ürün ve muadil kütüphanesi (muadil kararlarının tutulduğu ürün kartları) |
 
-Örnek veri `lib/data.ts` içindedir. Döviz kuru örnek değerdir (`KUR`). Muadil "kabul / uygun değil" kararları şimdilik tarayıcıda (localStorage) saklanır.
+Örnek veri `lib/data.ts` içindedir; demo "şimdi"si `BUGUN` sabitidir (27 Ekim 2026). Döviz kuru örnek değerdir (`KUR`). Muadil "kabul / uygun değil" kararları şimdilik tarayıcıda (localStorage) saklanır. Menüde "yakında" yazanlar (Siparişler, Onay akışı, Raporlar) sonraki adımlardır.
 
 ## Geliştirme
 

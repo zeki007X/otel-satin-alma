@@ -31,6 +31,9 @@ export default function Karsilastirma({
   const { sartlar } = useKalemSartlari();
   const [mod, setMod] = useState<Mod>({ tur: "enIyi" });
   const [siparis, setSiparis] = useState(false);
+  const [pazarlik, setPazarlik] = useState(false);
+  const [indirAcik, setIndirAcik] = useState(false);
+  const [hatirlatildi, setHatirlatildi] = useState(false);
 
   const ad = (id: string) => tedarikciler.find((t) => t.id === id)?.ad ?? id;
   const sart = (kalemId: string, varsayilan: "birebir" | "muadil") => sartlar[`${talep.id}:${kalemId}`] ?? varsayilan;
@@ -107,6 +110,72 @@ export default function Karsilastirma({
     })),
   ];
 
+  // Seçime göre değişen karar notları
+  const kararNotlari: React.ReactNode[] = [];
+  for (const q of teklifler) {
+    const id = q.tedarikciId;
+    const kapsam = tablo.filter((r) => r.hucreler.find((h) => h.tedarikciId === id)?.fiyat != null).length;
+    const secilenSayi = tablo.filter((r) => secim[r.k.id] === id).length;
+    const gun = parseInt(q.teslim);
+    if (kapsam < tablo.length && secilenSayi > 0) {
+      const ekler = [q.nakliye === "Hariç" ? "nakliye hariç" : "", `vade ${q.odeme}`].filter(Boolean).join(" ve ");
+      kararNotlari.push(
+        <>
+          <b>{ad(id)}</b> yalnız {kapsam} kaleme teklif verdi; seçtiğiniz {secilenSayi} kalemde en uygun fiyat onda ama {ekler}.
+        </>,
+      );
+    } else if (q.nakliye === "Hariç") {
+      kararNotlari.push(
+        <>
+          <b>{ad(id)}</b> nakliye hariç fiyat verdi; karşılaştırırken ekleyin.
+        </>,
+      );
+    }
+    if (secilenSayi > 0 && gun >= 60) {
+      kararNotlari.push(
+        <>
+          <b>{ad(id)}</b> için teslim süresi {q.teslim}; istenen teslim tarihine yetişip yetişmeyeceğini teyit edin.
+        </>,
+      );
+    }
+    if (q.odeme.toLowerCase().startsWith("peşin")) {
+      kararNotlari.push(
+        <>
+          <b>{ad(id)}</b> peşin ödeme istiyor.
+        </>,
+      );
+    }
+  }
+
+  const excelIndir = () => {
+    // Sayılar Türkçe ondalıkla (virgül) yazılır ki Excel sayı olarak okusun
+    const hucre = (v: string | number) =>
+      `"${(typeof v === "number" ? v.toLocaleString("tr-TR", { useGrouping: false }) : v).replace(/"/g, '""')}"`;
+    const satirlar: (string | number)[][] = [
+      ["Kalem", "Miktar", "Birim", ...teklifler.map((q) => ad(q.tedarikciId)), "Seçilen"],
+      ...tablo.map((r) => [
+        r.k.ad,
+        r.k.miktar,
+        r.k.birim,
+        ...r.hucreler.map((h) => (h.fiyat == null ? "" : Math.round(h.fiyat * 100) / 100)),
+        secim[r.k.id] ? ad(secim[r.k.id]!) : "",
+      ]),
+      ["Toplam (KDV hariç)", "", "", ...toplamlar.map((x) => Math.round(x.t)), Math.round(secilenToplam)],
+      ["Teslim süresi", "", "", ...teklifler.map((q) => q.teslim)],
+      ["Ödeme vadesi", "", "", ...teklifler.map((q) => q.odeme)],
+      ["Nakliye", "", "", ...teklifler.map((q) => q.nakliye)],
+      ["Opsiyon", "", "", ...teklifler.map((q) => q.opsiyon)],
+    ];
+    // Excel'in Türkçe ayarlarında doğru açılması için ; ayırıcı ve BOM
+    const csv = "\uFEFF" + satirlar.map((s) => s.map(hucre).join(";")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `karsilastirma-${talep.no}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const cevapsiz = talep.davetliler.filter((id) => !teklifler.some((q) => q.tedarikciId === id));
   const muadilVar = tablo.some((r) => r.hucreler.some((h) => h.muadil));
 
@@ -123,14 +192,50 @@ export default function Karsilastirma({
           </span>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link href={`/teklifler/${talep.id}`} className="btn btn-cizgi">
-            Gelen dosyalar
-          </Link>
-          <button className="btn btn-cizgi" onClick={() => window.print()}>
-            Yazdır / PDF
+          <button className="btn btn-cizgi" aria-pressed={pazarlik} onClick={() => setPazarlik((p) => !p)}>
+            Pazarlık turu aç
           </button>
+          <div className="acilir">
+            <button className="btn btn-cizgi" aria-expanded={indirAcik} onClick={() => setIndirAcik((a) => !a)}>
+              Excel / PDF indir
+            </button>
+            {indirAcik && (
+              <div className="acilir-panel" role="menu" style={{ width: 220 }}>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    excelIndir();
+                    setIndirAcik(false);
+                  }}
+                >
+                  <b>Excel (CSV)</b>
+                  <span className="soluk" style={{ fontSize: 12 }}>Tablo ve ticari şartlar</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setIndirAcik(false);
+                    setTimeout(() => window.print(), 50);
+                  }}
+                >
+                  <b>PDF</b>
+                  <span className="soluk" style={{ fontSize: 12 }}>Yazdır → PDF olarak kaydet</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
+
+      {pazarlik && (
+        <div className="bilgi" role="status">
+          <span>
+            <b>Pazarlık turu (demo):</b> {teklifler.length} tedarikçiye, kalem bazında en düşük fiyatı göstermeden &quot;son fiyatınızı
+            güncelleyin&quot; çağrısı gider. Yeni fiyatlar geldikçe bu tablo kendiliğinden güncellenir. Gerçek gönderim sonraki
+            sürümde.
+          </span>
+        </div>
+      )}
 
       <div role="group" aria-label="Seçim modu" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <span style={{ fontWeight: 600 }}>Hızlı seçim:</span>
@@ -158,11 +263,7 @@ export default function Karsilastirma({
         </div>
       )}
 
-      <section className="kart" style={{ overflow: "hidden" }} aria-labelledby="matris">
-        <div className="kart-bas">
-          <h2 id="matris">Fiyat karşılaştırma tablosu</h2>
-          <span className="soluk" style={{ fontSize: 13 }}>Birim fiyatlar TL, KDV hariç · döviz teklifleri örnek kurla çevrildi</span>
-        </div>
+      <section className="kart" style={{ overflow: "hidden" }} aria-label="Fiyat karşılaştırma tablosu">
         <div className="tablo-kutu">
           <table style={{ minWidth: 300 + teklifler.length * 160 }}>
             <thead>
@@ -227,7 +328,7 @@ export default function Karsilastirma({
                   })}
                 </tr>
               ))}
-              <tr style={{ background: "#fafbf9" }}>
+              <tr className="toplam-satir">
                 <td><b>Toplam (KDV hariç)</b></td>
                 {toplamlar.map((x) => (
                   <td key={x.id} className="sag mono">
@@ -242,6 +343,7 @@ export default function Karsilastirma({
                   ["Ödeme vadesi", (q: Teklif) => q.odeme],
                   ["Nakliye", (q: Teklif) => q.nakliye],
                   ["Opsiyon", (q: Teklif) => q.opsiyon],
+                  ...(teklifler.some((q) => q.numune) ? ([["Numune", (q: Teklif) => q.numune ?? "—"]] as const) : []),
                   ["Tedarikçi puanı", (q: Teklif) => `${tedarikciler.find((t) => t.id === q.tedarikciId)?.puan.toLocaleString("tr-TR")} / 5`],
                 ] as const
               ).map(([etiket, f]) => (
@@ -255,38 +357,41 @@ export default function Karsilastirma({
             </tbody>
           </table>
         </div>
+        <p className="soluk" style={{ padding: "12px 20px", fontSize: 12, borderTop: "1px solid #eceeea" }}>
+          Birim fiyatlar TL, KDV hariç · döviz teklifleri örnek kurla çevrildi
+        </p>
       </section>
 
       <div className="iki-kolon">
-        <section className="kart kart-ic genis" aria-labelledby="sonuc">
+        <section className="koyu-kart genis" aria-labelledby="sonuc">
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 20, alignItems: "flex-end" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <h2 id="sonuc">Seçiminizin toplamı</h2>
-              <span className="mono" style={{ fontSize: 30 }}>{tl(secilenToplam)}</span>
-              <span className="soluk">
+              <h2 id="sonuc" style={{ fontSize: 13, fontWeight: 500, color: "#aeb8c0" }}>Seçiminizin toplamı</h2>
+              <span className="buyuk">{tl(secilenToplam)}</span>
+              <span style={{ color: "#c9d2d8" }}>
                 {kullanilan.length === 1
                   ? `Tek tedarikçi: ${ad(kullanilan[0])}`
                   : `${kullanilan.length} tedarikçiye bölünmüş sipariş: ${kullanilan.map(ad).join(", ")}`}
               </span>
               {kalemsiz.length > 0 && (
-                <span style={{ color: "#8a3b10", fontSize: 13 }}>
+                <span style={{ color: "#f0c9a6", fontSize: 13 }}>
                   Uygun teklifi olmayan kalem: {kalemsiz.map((r) => r.k.ad).join(", ")}
                 </span>
               )}
             </div>
             {enPahaliTam > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
-                <span className="soluk" style={{ fontSize: 13 }}>En pahalı tam teklife göre fark</span>
-                <span className="mono" style={{ fontSize: 22, color: "#0b6b66" }}>{tl(enPahaliTam - secilenToplam)}</span>
+                <span style={{ fontSize: 13, color: "#aeb8c0" }}>En pahalı tam teklife göre fark</span>
+                <span className="mono" style={{ fontSize: 22, color: "#5fd3c6" }}>{tl(enPahaliTam - secilenToplam)}</span>
               </div>
             )}
           </div>
           {!siparis ? (
-            <button className="btn btn-ana" style={{ alignSelf: "flex-start" }} onClick={() => setSiparis(true)} disabled={!kullanilan.length}>
+            <button className="btn btn-parlak" style={{ alignSelf: "flex-start", padding: "0 22px" }} onClick={() => setSiparis(true)} disabled={!kullanilan.length}>
               Onaya gönder ve sipariş oluştur
             </button>
           ) : (
-            <div className="bilgi basari" role="status">
+            <div className="bilgi basari" role="status" style={{ color: "#15202b" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <b>Sipariş taslakları oluşturuldu ve onaya gönderildi (demo).</b>
                 {kullanilan.map((id) => {
@@ -304,24 +409,21 @@ export default function Karsilastirma({
         </section>
         <aside className="kart kart-ic dar" aria-labelledby="not">
           <h2 id="not">Karar notları</h2>
-          {teklifler
-            .filter((q) => q.nakliye === "Hariç")
-            .map((q) => (
-              <p key={q.tedarikciId}>
-                <b>{ad(q.tedarikciId)}</b> nakliye hariç fiyat verdi; karşılaştırırken ekleyin.
-              </p>
-            ))}
-          {teklifler
-            .filter((q) => q.odeme.toLowerCase().startsWith("peşin"))
-            .map((q) => (
-              <p key={q.tedarikciId + "o"}>
-                <b>{ad(q.tedarikciId)}</b> peşin ödeme istiyor.
-              </p>
-            ))}
+          {kararNotlari.map((n, i) => (
+            <p key={i} style={{ fontSize: 13, lineHeight: 1.55 }}>
+              {n}
+            </p>
+          ))}
           {cevapsiz.length > 0 && (
-            <p>
-              {cevapsiz.map(ad).join(", ")} henüz yanıt vermedi.{" "}
-              <Link href={`/teklifler/${talep.id}?t=${cevapsiz[0]}`}>Hatırlatma gönder</Link>
+            <p style={{ fontSize: 13, lineHeight: 1.55 }}>
+              {cevapsiz.length} tedarikçi ({cevapsiz.map(ad).join(", ")}) henüz yanıt vermedi.{" "}
+              {hatirlatildi ? (
+                <span className="soluk">Hatırlatma gönderildi (demo).</span>
+              ) : (
+                <button className="yazi-link" onClick={() => setHatirlatildi(true)}>
+                  Hatırlatma gönder
+                </button>
+              )}
             </p>
           )}
         </aside>

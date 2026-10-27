@@ -3,18 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const menu = [
+// href'i olmayanlar sonraki sürümde gelecek ekranlar.
+const menu: { href?: string; ad: string }[] = [
   { href: "/", ad: "Panel" },
   { href: "/talepler/18507", ad: "Teklif istek formları" },
-  { href: "/teklifler/18507", ad: "Gelen teklifler" },
-  { href: "/karsilastirma/18507", ad: "Karşılaştırmalar" },
+  { href: "/teklifler/18507", ad: "Gelen teklif dosyaları" },
+  { href: "/karsilastirma/RFQ-2026-118", ad: "Karşılaştırmalar" },
   { href: "/muadil/18507/k1", ad: "Muadil değerlendirme" },
+  { ad: "Siparişler" },
+  { href: "/tedarikciler", ad: "Kayıtlı tedarikçiler" },
+  { href: "/kutuphane", ad: "Ürün ve muadil kütüphanesi" },
+  { ad: "Onay akışı" },
+  { ad: "Raporlar" },
 ];
 
 const aktifMi = (yol: string, href: string) =>
   href === "/" ? yol === "/" : yol.split("/")[1] === href.split("/")[1];
 
-export default function OtelKabuk({ children }: { children: React.ReactNode }) {
+export default function OtelKabuk({ children, alt }: { children: React.ReactNode; alt?: React.ReactNode }) {
   const yol = usePathname();
   return (
     <div className="kabuk">
@@ -27,19 +33,29 @@ export default function OtelKabuk({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="menu">
-          {menu.map((m) => (
-            <Link key={m.href} href={m.href} className={aktifMi(yol, m.href) ? "aktif" : ""}>
-              {m.ad}
-            </Link>
-          ))}
-          <Link href="/portal/18507?t=lara-muzik" className="portal-link">
+          {menu.map((m) =>
+            m.href ? (
+              <Link key={m.ad} href={m.href} className={aktifMi(yol, m.href) ? "aktif" : ""}>
+                {m.ad}
+              </Link>
+            ) : (
+              <span key={m.ad} className="yakinda" aria-disabled="true">
+                {m.ad} <small>yakında</small>
+              </span>
+            ),
+          )}
+          <Link href="/portal/RFQ-2026-121?t=akdeniz-kozmetik" className="portal-link">
             Tedarikçi portalı (önizleme) →
           </Link>
         </div>
         <div className="tesis">
-          <span>Tesis</span>
-          <b>Susesi Luxury Resort</b>
-          <span>Satın alma müdürü</span>
+          {alt ?? (
+            <>
+              <span>Tesis</span>
+              <b>Susesi Luxury Resort · Antalya</b>
+              <span>Satın alma müdürü</span>
+            </>
+          )}
         </div>
       </nav>
       <main className="icerik">{children}</main>

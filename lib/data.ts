@@ -6,6 +6,10 @@ export type Para = "TRY" | "EUR" | "USD";
 export const KUR: Record<Para, number> = { TRY: 1, EUR: 48.0, USD: 41.5 };
 export const KUR_TARIHI = "örnek kur";
 
+// Demo verisi bu ana göre yazıldı ("şimdi"). Gerçek sürümde new Date() kullanılacak.
+export const BUGUN = new Date("2026-10-27T13:00:00+03:00");
+export const BUGUN_METIN = "27 Ekim 2026, Salı";
+
 export type Tedarikci = {
   id: string;
   ad: string;
@@ -13,20 +17,39 @@ export type Tedarikci = {
   kategori: string[];
   siparisSayisi: number;
   puan: number;
+  sonSiparis?: string;
+  dogrulanmis?: boolean;
+  // Tedarikçinin portaldaki ürün kataloğu: ürün adı → birim fiyat (TL). "Katalog fiyatlarımı doldur" bunu kullanır.
+  katalog?: { fiyat: Record<string, number>; teslim: string; odeme: string; gecerlilik: string };
 };
 
 export const tedarikciler: Tedarikci[] = [
-  { id: "antalya-ses", ad: "Antalya Ses Sistemleri", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 14, puan: 4.8 },
-  { id: "akdeniz-pro", ad: "Akdeniz Pro Audio", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 9, puan: 4.6 },
+  { id: "antalya-ses", ad: "Antalya Ses Sistemleri", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 14, puan: 4.8, sonSiparis: "Mart 2026" },
+  { id: "akdeniz-pro", ad: "Akdeniz Pro Audio", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 9, puan: 4.6, sonSiparis: "Haziran 2026" },
   { id: "ege-sahne", ad: "Ege Sahne Teknik", sehir: "İzmir", kategori: ["ses"], siparisSayisi: 6, puan: 4.4 },
   { id: "lara-muzik", ad: "Lara Müzik Market", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 4, puan: 4.5 },
   { id: "toros-elk", ad: "Toros Elektronik", sehir: "Mersin", kategori: ["ses"], siparisSayisi: 2, puan: 4.2 },
-  { id: "ege-tekstil", ad: "Ege Tekstil", sehir: "Denizli", kategori: ["tekstil"], siparisSayisi: 11, puan: 4.8 },
+  { id: "ege-tekstil", ad: "Ege Tekstil", sehir: "Denizli", kategori: ["tekstil"], siparisSayisi: 11, puan: 4.8, sonSiparis: "Nisan 2026" },
   { id: "lara-havlu", ad: "Lara Havlu", sehir: "Antalya", kategori: ["tekstil"], siparisSayisi: 7, puan: 4.5 },
   { id: "denizli-dokuma", ad: "Denizli Dokuma", sehir: "Denizli", kategori: ["tekstil"], siparisSayisi: 5, puan: 4.3 },
   { id: "anadolu-tekstil", ad: "Anadolu Otel Tekstil", sehir: "Bursa", kategori: ["tekstil"], siparisSayisi: 8, puan: 4.6 },
   { id: "bursa-tekstil", ad: "Bursa Tekstil", sehir: "Bursa", kategori: ["tekstil"], siparisSayisi: 3, puan: 4.1 },
-  { id: "akdeniz-kozmetik", ad: "Akdeniz Kozmetik", sehir: "Antalya", kategori: ["buklet"], siparisSayisi: 12, puan: 4.8 },
+  {
+    id: "akdeniz-kozmetik",
+    ad: "Akdeniz Kozmetik",
+    sehir: "Antalya",
+    kategori: ["buklet"],
+    siparisSayisi: 12,
+    puan: 4.8,
+    sonSiparis: "Ocak 2026",
+    dogrulanmis: true,
+    katalog: {
+      fiyat: { "Şampuan": 3.1, "Duş jeli": 3.1, "Saç kremi": 3.25, "Vücut losyonu": 3.4, "Katı sabun": 2.15 },
+      teslim: "35 gün",
+      odeme: "60 gün",
+      gecerlilik: "30 gün",
+    },
+  },
   { id: "marmara-amenity", ad: "Marmara Amenity", sehir: "İstanbul", kategori: ["buklet"], siparisSayisi: 6, puan: 4.4 },
   { id: "toros-kozmetik", ad: "Toros Kozmetik", sehir: "Mersin", kategori: ["buklet"], siparisSayisi: 3, puan: 4.2 },
 ];
@@ -69,6 +92,11 @@ export type Talep = {
   kategoriAnahtar: string;
   tarih: string;
   sonTarih: string;
+  sonTarihIso: string;
+  konum: string;
+  // Süreç adımlarının alt yazıları: ihtiyaç listesi ve yönetici onayı
+  surec?: { talep: string; onay: string };
+  teslimBilgi?: string;
   durum: Durum;
   kalemler: Kalem[];
   davetliler: string[];
@@ -97,6 +125,8 @@ export type Teklif = {
   odeme: string;
   nakliye: "Dahil" | "Hariç";
   opsiyon: string;
+  kase?: boolean; // kaşe / imza tespit edildi
+  numune?: string;
   not?: string;
 };
 
@@ -120,6 +150,9 @@ export const talepler: Talep[] = [
     kategoriAnahtar: "ses",
     tarih: "19 Ekim 2026",
     sonTarih: "28 Eki, 17:00",
+    sonTarihIso: "2026-10-28T17:00:00+03:00",
+    konum: "Serik / Antalya",
+    surec: { talep: "Teknik dept. · 17 Eki", onay: "Onaylandı · 19 Eki" },
     durum: "karar",
     kalemler: [
       {
@@ -144,7 +177,7 @@ export const talepler: Talep[] = [
       },
     ],
     davetliler: ["antalya-ses", "akdeniz-pro", "ege-sahne", "lara-muzik", "toros-elk"],
-    istenenBilgiler: ["Teslim süresi", "Ödeme", "Nakliye", "Opsiyon", "Teknik föy", "Garanti"],
+    istenenBilgiler: ["Teslim süresi", "Ödeme", "Nakliye", "Opsiyon", "Teknik detay / föy", "Garanti"],
     not: "Muadil önerilirse teknik föy eklenmeli. 2. kalem 1. kaleme bağlı aksesuardır; muadil hoparlöre uygun kılıf istenir.",
   },
   {
@@ -157,6 +190,9 @@ export const talepler: Talep[] = [
     kategoriAnahtar: "tekstil",
     tarih: "14 Ekim 2026",
     sonTarih: "29 Eki, 17:00",
+    sonTarihIso: "2026-10-29T17:00:00+03:00",
+    konum: "Serik / Antalya",
+    surec: { talep: "Kat hizmetleri · 12 Eki", onay: "Onaylandı · 14 Eki" },
     durum: "karar",
     kalemler: [
       { id: "t1", ad: "Nevresim takımı, çift kişilik", aciklama: "300 TC saten, beyaz", birim: "takım", miktar: 900, sart: "muadil" },
@@ -180,6 +216,10 @@ export const talepler: Talep[] = [
     kategoriAnahtar: "buklet",
     tarih: "21 Ekim 2026",
     sonTarih: "2 Kas, 17:00",
+    sonTarihIso: "2026-11-02T17:00:00+03:00",
+    konum: "Serik / Antalya",
+    surec: { talep: "Kat hizmetleri · 20 Eki", onay: "Onaylandı · 21 Eki" },
+    teslimBilgi: "Teslim: 1 Mart 2027 öncesi · Merkez depo, Antalya",
     durum: "toplaniyor",
     kalemler: [
       { id: "b1", ad: "Şampuan", aciklama: "30 ml, tüp, logolu, paraben içermez", birim: "adet", miktar: 120000, sart: "muadil" },
@@ -214,7 +254,7 @@ export const teklifler: Teklif[] = [
   },
   {
     talepId: "18507", tedarikciId: "akdeniz-pro", geldi: "27 Eki 11:15", kanal: "pdf", dosya: "AKD-2026-1187.pdf", para: "EUR",
-    teslim: "10 gün", odeme: "45 gün", nakliye: "Dahil", opsiyon: "15 gün",
+    teslim: "10 gün", odeme: "45 gün", nakliye: "Dahil", opsiyon: "15 gün", kase: true,
     not: "1. kalemde muadil ürün önerildi: teknik karşılaştırmayı inceleyin.",
     satirlar: [
       { kalemId: R1, teklifEdilen: "Yamaha DXR12mkII", marka: "Yamaha", ham: "YAMAHA DXR12 MKII AKTİF HOP.", birimFiyat: 690, eslesme: "muadil" },
@@ -243,12 +283,12 @@ export const teklifler: Teklif[] = [
   // --- RFQ-2026-118: tekstil ---
   ...(
     [
-      ["ege-tekstil", "27 Eki 09:10", "portal", [520, 410, 62, 245, 98, 118, 365], "45 gün", "60 gün", "Dahil"],
-      ["lara-havlu", "27 Eki 08:05", "xlsx", [null, null, 68, 228, 92, 110, 349], "30 gün", "30 gün", "Hariç"],
-      ["denizli-dokuma", "26 Eki 16:40", "pdf", [495, 385, 59, 238, 96, 124, 372], "60 gün", "90 gün", "Dahil"],
-      ["anadolu-tekstil", "26 Eki 11:30", "portal", [540, 420, 64, 255, 104, 115, 380], "40 gün", "Peşin, %2 iskonto", "Dahil"],
+      ["ege-tekstil", "27 Eki 09:10", "portal", [520, 410, 62, 245, 98, 118, 365], "45 gün", "60 gün", "Dahil", "Onaylandı"],
+      ["lara-havlu", "27 Eki 08:05", "xlsx", [null, null, 68, 228, 92, 110, 349], "30 gün", "30 gün", "Hariç", "Yolda"],
+      ["denizli-dokuma", "26 Eki 16:40", "pdf", [495, 385, 59, 238, 96, 124, 372], "60 gün", "90 gün", "Dahil", "Onaylandı"],
+      ["anadolu-tekstil", "26 Eki 11:30", "portal", [540, 420, 64, 255, 104, 115, 380], "40 gün", "Peşin, %2 iskonto", "Dahil", "Gönderilmedi"],
     ] as const
-  ).map(([tid, geldi, kanal, fiyat, teslim, odeme, nakliye]) => ({
+  ).map(([tid, geldi, kanal, fiyat, teslim, odeme, nakliye, numune]) => ({
     talepId: "RFQ-2026-118",
     tedarikciId: tid,
     geldi,
@@ -257,6 +297,7 @@ export const teklifler: Teklif[] = [
     teslim,
     odeme,
     nakliye,
+    numune,
     opsiyon: "15 gün",
     satirlar: fiyat.map((f, i) => ({
       kalemId: "t" + (i + 1),
@@ -323,4 +364,116 @@ export const urunTeknik: Record<string, { metin: string[]; sayi: (number | null)
     metin: ['12" + 1", 2 yollu aktif', "1200 W", "129 dB", "52 Hz (−10 dB)", "100° × 85°", "14,3 kg"],
     sayi: [null, 1200, 129, 52, null, null],
   },
+};
+
+// Panelde listelenen, bu demoda ayrıntı ekranı olmayan diğer talepler (yalnız özet).
+export type OzetTalep = {
+  no: string;
+  baslik: string;
+  kategori: string;
+  kalemSayisi: number;
+  gelen: number;
+  davetli: number;
+  sonTarih: string;
+  sonTarihIso: string;
+  durum: Durum;
+};
+
+export const ozetTalepler: OzetTalep[] = [
+  { no: "RFQ-2026-119", baslik: "Restoran porselen ve cam", kategori: "F&B ekipman", kalemSayisi: 12, gelen: 5, davetli: 5, sonTarih: "25 Eki", sonTarihIso: "2026-10-25T17:00:00+03:00", durum: "onay" },
+  { no: "RFQ-2026-122", baslik: "Havuz havlusu ve bornoz", kategori: "Tekstil", kalemSayisi: 3, gelen: 1, davetli: 4, sonTarih: "5 Kas", sonTarihIso: "2026-11-05T17:00:00+03:00", durum: "toplaniyor" },
+  { no: "RFQ-2026-115", baslik: "Temizlik kimyasalları (Q1)", kategori: "Housekeeping", kalemSayisi: 14, gelen: 4, davetli: 4, sonTarih: "20 Eki", sonTarihIso: "2026-10-20T17:00:00+03:00", durum: "siparis" },
+];
+
+// Tedarikçi portalında, aynı tedarikçiye başka otellerden gelen talepler (demo; otel adı gizli).
+export const portalDigerTalepler: Record<string, { baslik: string; yer: string; sonTarih: string }[]> = {
+  buklet: [
+    { baslik: "Lobi ve SPA amenity", yer: "Belek", sonTarih: "6 Kas" },
+    { baslik: "Çocuk kulübü seti", yer: "Side", sonTarih: "11 Kas" },
+  ],
+};
+
+// Ürün ve muadil kütüphanesi: talep formuna tek tıkla eklenebilen, teknik föyü işlenmiş ürünler.
+export type KutuphaneUrunu = {
+  ad: string;
+  marka: string;
+  kod: string;
+  birim: string;
+  kategori: string;
+  asgariOzellik?: Ozellik[];
+  bilinenMuadiller?: string[];
+};
+
+export const urunKutuphanesi: KutuphaneUrunu[] = [
+  {
+    ad: "RCF ART 912-A monitör aktif hoparlör",
+    marka: "RCF",
+    kod: "ART 912-A",
+    birim: "adet",
+    kategori: "ses",
+    asgariOzellik: SES_OZELLIK,
+    bilinenMuadiller: ["Yamaha DXR12mkII", "HK Audio Linear 3 112 FA", "dB Technologies Opera 12"],
+  },
+  { ad: "RCF ART 912-A softcase", marka: "RCF", kod: "ART 912-A COVER", birim: "adet", kategori: "ses" },
+  {
+    ad: "Shure SM58 dinamik mikrofon",
+    marka: "Shure",
+    kod: "SM58-LCE",
+    birim: "adet",
+    kategori: "ses",
+    asgariOzellik: [
+      { k: "Tip", v: "Dinamik, kardioid" },
+      { k: "Frekans", v: "50 Hz – 15 kHz" },
+    ],
+  },
+];
+
+// --- yardımcılar ---
+
+const AYLAR: Record<string, number> = { Oca: 0, Şub: 1, Mar: 2, Nis: 3, May: 4, Haz: 5, Tem: 6, Ağu: 7, Eyl: 8, Eki: 9, Kas: 10, Ara: 11 };
+
+// "27 Eki 09:42" → Date (demo yılı 2026, Türkiye saati)
+export const geldiTarih = (s: string) => {
+  const [g, a, saat = "00:00"] = s.split(" ");
+  const ay = String((AYLAR[a] ?? 0) + 1).padStart(2, "0");
+  return new Date(`2026-${ay}-${g.padStart(2, "0")}T${saat}:00+03:00`);
+};
+
+const trGun = (d: Date) => d.toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" });
+
+export const neZaman = (d: Date, simdi = BUGUN) => {
+  const dk = Math.round((simdi.getTime() - d.getTime()) / 60000);
+  if (dk < 60) return `${Math.max(dk, 1)} dk önce`;
+  if (trGun(d) === trGun(simdi)) return `${Math.floor(dk / 60)} sa önce`;
+  if (trGun(d) === trGun(new Date(simdi.getTime() - 864e5))) return "Dün";
+  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", timeZone: "Europe/Istanbul" });
+};
+
+// Son teklif tarihine kalan süre: "6 gün 4 saat"
+export const kalanSure = (iso: string, simdi = BUGUN) => {
+  const dk = Math.floor((new Date(iso).getTime() - simdi.getTime()) / 60000);
+  if (dk <= 0) return "Süre doldu";
+  const gun = Math.floor(dk / 1440);
+  const saat = Math.floor((dk % 1440) / 60);
+  return gun > 0 ? `${gun} gün ${saat} saat` : saat > 0 ? `${saat} saat ${dk % 60} dk` : `${dk} dk`;
+};
+
+// Kalem bazında en düşük fiyatlarla, en pahalı tam teklife göre sağlanan fark (TL).
+export const tahminiTasarruf = (talep: Talep) => {
+  const qs = talepTeklifleri(talep.id);
+  if (qs.length < 2) return 0;
+  const satirTl = (q: Teklif, kalemId: string) => {
+    const s = q.satirlar.find((s) => s.kalemId === kalemId);
+    return s ? tlFiyat(s.birimFiyat, q.para) : null;
+  };
+  let enIyi = 0;
+  for (const k of talep.kalemler) {
+    const f = qs.map((q) => satirTl(q, k.id)).filter((x): x is number => x != null);
+    if (!f.length) return 0;
+    enIyi += Math.min(...f) * k.miktar;
+  }
+  const tamlar = qs
+    .filter((q) => talep.kalemler.every((k) => satirTl(q, k.id) != null))
+    .map((q) => talep.kalemler.reduce((a, k) => a + (satirTl(q, k.id) ?? 0) * k.miktar, 0));
+  return tamlar.length ? Math.max(0, Math.max(...tamlar) - enIyi) : 0;
 };

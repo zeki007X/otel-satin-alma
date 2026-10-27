@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import OtelKabuk from "@/components/OtelKabuk";
 import TalepFormu from "@/components/TalepFormu";
-import { talepBul, talepler, tedarikciler, type Talep } from "@/lib/data";
+import { talepBul, talepler, tedarikciler, urunKutuphanesi, type Talep } from "@/lib/data";
 
 export function generateStaticParams() {
   return [...talepler.map((t) => ({ id: t.id })), { id: "yeni" }];
@@ -17,6 +17,8 @@ const bosTalep: Talep = {
   kategoriAnahtar: "ses",
   tarih: "27 Ekim 2026",
   sonTarih: "",
+  sonTarihIso: "",
+  konum: "Serik / Antalya",
   durum: "taslak",
   kalemler: [{ id: "y1", ad: "", birim: "adet", miktar: 1, sart: "birebir" }],
   davetliler: [],
@@ -29,7 +31,7 @@ export default async function TalepSayfasi({ params }: { params: Promise<{ id: s
   if (!talep) notFound();
   return (
     <OtelKabuk>
-      <TalepFormu talep={talep} tedarikciler={tedarikciler} />
+      <TalepFormu talep={talep} tedarikciler={tedarikciler} kutuphane={urunKutuphanesi} />
     </OtelKabuk>
   );
 }

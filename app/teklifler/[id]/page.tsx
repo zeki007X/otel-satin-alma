@@ -19,7 +19,15 @@ export default async function TekliflerSayfasi({
   const talep = talepBul(id);
   if (!talep) notFound();
   return (
-    <OtelKabuk>
+    <OtelKabuk
+      alt={
+        <>
+          <span>Teklif adresi</span>
+          <b className="mono" style={{ fontSize: 13, wordBreak: "break-all" }}>teklif@susesi.tedarikcim.com</b>
+          <span>Tedarikçiler cevabı buraya veya satın almacıya atar; ek dosyalar otomatik okunur.</span>
+        </>
+      }
+    >
       <TeklifKutusu talep={talep} teklifler={talepTeklifleri(id)} tedarikciler={tedarikciler} ilkSecim={t} />
     </OtelKabuk>
   );

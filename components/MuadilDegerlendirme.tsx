@@ -100,10 +100,7 @@ export default function MuadilDegerlendirme({
         </div>
       )}
 
-      <section className="kart" style={{ overflow: "hidden" }} aria-labelledby="spec">
-        <div className="kart-bas">
-          <h2 id="spec">Teknik özellik karşılaştırması</h2>
-        </div>
+      <section className="kart" style={{ overflow: "hidden" }} aria-label="Teknik özellik karşılaştırması">
         <div className="tablo-kutu">
           <table style={{ minWidth: 200 + kolonlar.length * 200 }}>
             <thead>
@@ -187,7 +184,7 @@ export default function MuadilDegerlendirme({
                   return (
                     <td key={c.model + j}>
                       {c.referans ? (
-                        <span className="soluk" style={{ fontSize: 13 }}>Talep edilen model</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#0b6b66" }}>Talep edilen model</span>
                       ) : katiMi ? (
                         <span className="soluk" style={{ fontSize: 13 }}>Değerlendirme dışı</span>
                       ) : (
@@ -232,15 +229,17 @@ export default function MuadilDegerlendirme({
             </div>
             {enUygun && (
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ color: "#aeb8c0", fontSize: 13 }}>Dahil olanlar içinde en uygun</span>
-                <span style={{ fontSize: 18, fontWeight: 600, color: "#fff" }}>
+                <span style={{ color: "#aeb8c0", fontSize: 13 }}>
+                  {kolonlar.some((c) => karar(c.model) === "kabul") ? "Kabul edilenler" : "Dahil olanlar"} içinde en uygun
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 600, color: "#5fd3c6" }}>
                   {enUygun.model} · <span className="mono">{tl((enUygun.fiyat ?? 0) * kalem.miktar)}</span>
                 </span>
               </div>
             )}
           </div>
           <Link href={`/karsilastirma/${talep.id}`} className="btn btn-parlak" style={{ alignSelf: "flex-start", padding: "0 22px" }}>
-            Karşılaştırma tablosuna dön
+            Karşılaştırma tablosuna aktar
           </Link>
         </section>
         <aside className="kart kart-ic dar" aria-labelledby="hafiza">
@@ -249,6 +248,9 @@ export default function MuadilDegerlendirme({
             Burada verdiğiniz &quot;kabul / uygun değil&quot; kararları <b>{ref}</b> için saklanır. Bu ürün bir dahaki talepte geçtiğinde
             kabul ettiğiniz muadiller otomatik önerilir, reddettikleriniz baştan elenir.
           </p>
+          <Link href="/kutuphane" style={{ fontWeight: 600, fontSize: 13 }}>
+            Ürün kartını aç
+          </Link>
           <span className="soluk" style={{ fontSize: 12 }}>İlk sürümde kararlar bu tarayıcıda tutulur.</span>
         </aside>
       </div>

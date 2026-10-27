@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import TedarikciPortali from "@/components/TedarikciPortali";
-import { talepBul, talepler, tedarikciBul } from "@/lib/data";
+import { portalDigerTalepler, talepBul, talepler, tedarikciBul } from "@/lib/data";
 
 export function generateStaticParams() {
   return talepler.map((t) => ({ id: t.id }));
@@ -20,5 +20,6 @@ export default async function PortalSayfasi({
   const tedarikci = tedarikciBul(t ?? "") ?? tedarikciBul(talep.davetliler[0]);
   if (!tedarikci) notFound();
   const gelenTalepler = talepler.filter((x) => x.davetliler.includes(tedarikci.id));
-  return <TedarikciPortali talep={talep} tedarikci={tedarikci} gelenTalepler={gelenTalepler} />;
+  const digerTalepler = tedarikci.kategori.flatMap((k) => portalDigerTalepler[k] ?? []);
+  return <TedarikciPortali talep={talep} tedarikci={tedarikci} gelenTalepler={gelenTalepler} digerTalepler={digerTalepler} />;
 }
