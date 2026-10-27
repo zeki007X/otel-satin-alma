@@ -10,8 +10,22 @@ export const KUR_TARIHI = "örnek kur";
 export const BUGUN = new Date("2026-10-27T13:00:00+03:00");
 export const BUGUN_METIN = "27 Ekim 2026, Salı";
 
+export const KATEGORILER: Record<string, string> = {
+  ses: "Ses ve ışık sistemleri",
+  tekstil: "Tekstil",
+  buklet: "Banyo ürünleri",
+  fb: "F&B ekipman",
+  temizlik: "Housekeeping",
+};
+
+// Otelin kendi sınıflandırması: ana tedarikçi, yedek, deneme aşamasında
+export type Grup = "ana" | "yedek" | "deneme";
+export const GRUPLAR: Record<Grup, string> = { ana: "Ana tedarikçi", yedek: "Yedek", deneme: "Deneme" };
+
+// Otelin kendi tedarikçi listesi ("Tedarikçilerim"). Puan, sipariş ve notlar yalnız bu otele aittir.
 export type Tedarikci = {
   id: string;
+  grup?: Grup;
   ad: string;
   sehir: string;
   kategori: string[];
@@ -27,13 +41,13 @@ export const tedarikciler: Tedarikci[] = [
   { id: "antalya-ses", ad: "Antalya Ses Sistemleri", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 14, puan: 4.8, sonSiparis: "Mart 2026" },
   { id: "akdeniz-pro", ad: "Akdeniz Pro Audio", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 9, puan: 4.6, sonSiparis: "Haziran 2026" },
   { id: "ege-sahne", ad: "Ege Sahne Teknik", sehir: "İzmir", kategori: ["ses"], siparisSayisi: 6, puan: 4.4 },
-  { id: "lara-muzik", ad: "Lara Müzik Market", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 4, puan: 4.5 },
-  { id: "toros-elk", ad: "Toros Elektronik", sehir: "Mersin", kategori: ["ses"], siparisSayisi: 2, puan: 4.2 },
+  { id: "lara-muzik", ad: "Lara Müzik Market", sehir: "Antalya", kategori: ["ses"], siparisSayisi: 4, puan: 4.5, grup: "yedek" },
+  { id: "toros-elk", ad: "Toros Elektronik", sehir: "Mersin", kategori: ["ses"], siparisSayisi: 2, puan: 4.2, grup: "deneme" },
   { id: "ege-tekstil", ad: "Ege Tekstil", sehir: "Denizli", kategori: ["tekstil"], siparisSayisi: 11, puan: 4.8, sonSiparis: "Nisan 2026" },
   { id: "lara-havlu", ad: "Lara Havlu", sehir: "Antalya", kategori: ["tekstil"], siparisSayisi: 7, puan: 4.5 },
   { id: "denizli-dokuma", ad: "Denizli Dokuma", sehir: "Denizli", kategori: ["tekstil"], siparisSayisi: 5, puan: 4.3 },
   { id: "anadolu-tekstil", ad: "Anadolu Otel Tekstil", sehir: "Bursa", kategori: ["tekstil"], siparisSayisi: 8, puan: 4.6 },
-  { id: "bursa-tekstil", ad: "Bursa Tekstil", sehir: "Bursa", kategori: ["tekstil"], siparisSayisi: 3, puan: 4.1 },
+  { id: "bursa-tekstil", ad: "Bursa Tekstil", sehir: "Bursa", kategori: ["tekstil"], siparisSayisi: 3, puan: 4.1, grup: "yedek" },
   {
     id: "akdeniz-kozmetik",
     ad: "Akdeniz Kozmetik",
@@ -51,13 +65,62 @@ export const tedarikciler: Tedarikci[] = [
     },
   },
   { id: "marmara-amenity", ad: "Marmara Amenity", sehir: "İstanbul", kategori: ["buklet"], siparisSayisi: 6, puan: 4.4 },
-  { id: "toros-kozmetik", ad: "Toros Kozmetik", sehir: "Mersin", kategori: ["buklet"], siparisSayisi: 3, puan: 4.2 },
+  { id: "toros-kozmetik", ad: "Toros Kozmetik", sehir: "Mersin", kategori: ["buklet"], siparisSayisi: 3, puan: 4.2, grup: "deneme" },
   { id: "anadolu-porselen", ad: "Anadolu Porselen", sehir: "Kütahya", kategori: ["fb"], siparisSayisi: 6, puan: 4.6, sonSiparis: "Şubat 2026" },
   { id: "cam-dunyasi", ad: "Cam Dünyası", sehir: "İstanbul", kategori: ["fb"], siparisSayisi: 4, puan: 4.4 },
   { id: "akdeniz-hijyen", ad: "Akdeniz Hijyen", sehir: "Antalya", kategori: ["temizlik"], siparisSayisi: 15, puan: 4.7, sonSiparis: "Ekim 2026" },
 ];
 
 export const tedarikciBul = (id: string) => tedarikciler.find((t) => t.id === id);
+
+// Ortak satıcı havuzu: platformdaki tüm otellerin kaydettiği firmalar. Burada yalnız firma bilgisi ve
+// otellerin ortalama puanı görünür; her otelin fiyatları, notları ve kendi puanı paylaşılmaz.
+export type HavuzFirma = {
+  id: string;
+  ad: string;
+  sehir: string;
+  kategori: string[];
+  dogrulanmis?: boolean;
+  otelSayisi: number; // bu firmayla çalışan otel sayısı
+  platformPuan: number; // otellerin ortalama puanı
+  platformSiparis: number;
+};
+
+const havuzIstatistik: Record<string, [number, number, number]> = {
+  // id: [otel sayısı, platform puanı, platform siparişi]
+  "antalya-ses": [9, 4.7, 61],
+  "akdeniz-pro": [6, 4.5, 38],
+  "ege-sahne": [4, 4.4, 19],
+  "lara-muzik": [3, 4.3, 11],
+  "toros-elk": [2, 4.0, 5],
+  "ege-tekstil": [14, 4.7, 96],
+  "lara-havlu": [11, 4.5, 72],
+  "denizli-dokuma": [8, 4.4, 40],
+  "anadolu-tekstil": [12, 4.6, 81],
+  "bursa-tekstil": [5, 4.1, 17],
+  "akdeniz-kozmetik": [17, 4.8, 124],
+  "marmara-amenity": [9, 4.4, 48],
+  "toros-kozmetik": [3, 4.0, 9],
+  "anadolu-porselen": [10, 4.6, 54],
+  "cam-dunyasi": [7, 4.3, 31],
+  "akdeniz-hijyen": [15, 4.7, 140],
+};
+
+export const havuz: HavuzFirma[] = [
+  ...tedarikciler.map((t) => {
+    const [otelSayisi, platformPuan, platformSiparis] = havuzIstatistik[t.id] ?? [1, t.puan, t.siparisSayisi];
+    return { id: t.id, ad: t.ad, sehir: t.sehir, kategori: t.kategori, dogrulanmis: t.dogrulanmis ?? otelSayisi >= 8, otelSayisi, platformPuan, platformSiparis };
+  }),
+  { id: "ses-isik-market", ad: "Ses Işık Market", sehir: "İstanbul", kategori: ["ses"], dogrulanmis: true, otelSayisi: 11, platformPuan: 4.6, platformSiparis: 57 },
+  { id: "orfe-muzik", ad: "Orfe Müzik", sehir: "İzmir", kategori: ["ses"], otelSayisi: 5, platformPuan: 4.5, platformSiparis: 22 },
+  { id: "linear-teknik", ad: "Linear Teknik", sehir: "İstanbul", kategori: ["ses"], otelSayisi: 3, platformPuan: 4.2, platformSiparis: 8 },
+  { id: "usak-havlu", ad: "Uşak Havlu", sehir: "Uşak", kategori: ["tekstil"], dogrulanmis: true, otelSayisi: 9, platformPuan: 4.6, platformSiparis: 44 },
+  { id: "kemer-tekstil", ad: "Kemer Otel Tekstil", sehir: "Antalya", kategori: ["tekstil"], otelSayisi: 6, platformPuan: 4.3, platformSiparis: 25 },
+  { id: "ege-amenity", ad: "Ege Amenity", sehir: "İzmir", kategori: ["buklet"], dogrulanmis: true, otelSayisi: 8, platformPuan: 4.5, platformSiparis: 39 },
+  { id: "belek-otel-ekipman", ad: "Belek Otel Ekipman", sehir: "Antalya", kategori: ["fb", "temizlik"], dogrulanmis: true, otelSayisi: 13, platformPuan: 4.5, platformSiparis: 70 },
+  { id: "kutahya-seramik", ad: "Kütahya Seramik Atölyesi", sehir: "Kütahya", kategori: ["fb"], otelSayisi: 4, platformPuan: 4.4, platformSiparis: 14 },
+  { id: "marmara-kimya", ad: "Marmara Kimya", sehir: "Kocaeli", kategori: ["temizlik"], dogrulanmis: true, otelSayisi: 10, platformPuan: 4.5, platformSiparis: 63 },
+];
 
 export type Ozellik = { k: string; v: string };
 

@@ -13,7 +13,8 @@ const menu: { href?: string; ad: string }[] = [
   { href: "/muadil/18507/k1", ad: "Muadil değerlendirme" },
   { href: "/siparisler", ad: "Siparişler" },
   { href: "/onay", ad: "Onay akışı" },
-  { href: "/tedarikciler", ad: "Kayıtlı tedarikçiler" },
+  { href: "/tedarikciler", ad: "Tedarikçilerim" },
+  { href: "/havuz", ad: "Ortak satıcı havuzu" },
   { href: "/kutuphane", ad: "Ürün ve muadil kütüphanesi" },
   { ad: "Raporlar" },
 ];

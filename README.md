@@ -13,7 +13,8 @@ Otellerin teklif toplama sürecini tek ekrana alan platformun ilk sürümü (Nex
 | `/karsilastirma/RFQ-2026-118` | Fiyat karşılaştırma, kalem bazında seçim, bölünmüş sipariş, Excel (CSV) / PDF indirme |
 | `/muadil/18507/k1` | Muadil değerlendirme (RCF ART 912-A ↔ Yamaha DXR12mkII, HK Audio L3 112 FA, dB Technologies Opera 12) |
 | `/portal/RFQ-2026-121?t=akdeniz-kozmetik` | Tedarikçi portalı (kör teklif, katalog fiyatlarıyla doldurma, kısmi teklif) |
-| `/tedarikciler` | Kayıtlı tedarikçiler |
+| `/tedarikciler` | Tedarikçilerim: otelin kendi listesi, kategori ve sınıf (ana / yedek / deneme) |
+| `/havuz` | Ortak satıcı havuzu: tüm otellerin kaydettiği firmalar; fiyat, not ve otel puanı paylaşılmaz |
 | `/kutuphane` | Ürün ve muadil kütüphanesi (muadil kararlarının tutulduğu ürün kartları) |
 | `/onay` | Onay akışı: mali işler müdürü, 150.000 ₺ üstünde genel müdür onayı; onayla / reddet (gerekçeli) |
 | `/siparisler` | Siparişler: onaylananı tedarikçiye gönder, teslim al |

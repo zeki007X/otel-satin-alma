@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import OtelKabuk from "@/components/OtelKabuk";
 import TalepFormu from "@/components/TalepFormu";
-import { talepBul, talepler, tedarikciler, urunKutuphanesi, type Talep } from "@/lib/data";
+import { havuz, talepBul, talepler, tedarikciler, urunKutuphanesi, type Talep } from "@/lib/data";
 
 export function generateStaticParams() {
   return [...talepler.map((t) => ({ id: t.id })), { id: "yeni" }];
@@ -31,7 +31,7 @@ export default async function TalepSayfasi({ params }: { params: Promise<{ id: s
   if (!talep) notFound();
   return (
     <OtelKabuk>
-      <TalepFormu talep={talep} tedarikciler={tedarikciler} kutuphane={urunKutuphanesi} />
+      <TalepFormu talep={talep} tedarikciler={tedarikciler} havuz={havuz} kutuphane={urunKutuphanesi} />
     </OtelKabuk>
   );
 }

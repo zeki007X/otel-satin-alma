@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { Kalem, KutuphaneUrunu, Ozellik, Talep, Tedarikci } from "@/lib/data";
+import { GRUPLAR, KATEGORILER, type HavuzFirma, type Kalem, type KutuphaneUrunu, type Ozellik, type Talep, type Tedarikci } from "@/lib/data";
+import { useTedarikcilerim } from "@/lib/tedarikci";
 
-const KATEGORILER = [
-  { anahtar: "ses", ad: "Ses ve ışık sistemleri" },
-  { anahtar: "tekstil", ad: "Tekstil" },
-  { anahtar: "buklet", ad: "Banyo ürünleri" },
-];
+// Yeni talepte kategorideki ana ve yedek firmalar otomatik seçilir; denemeler elle seçilir.
+const otomatikSecim = (liste: Tedarikci[], kategori: string) =>
+  Object.fromEntries(liste.filter((t) => t.kategori.includes(kategori) && t.grup !== "deneme").map((t) => [t.id, true]));
 
 let sayac = 0;
 const yeniId = () => `y${Date.now()}-${sayac++}`;
@@ -16,13 +15,16 @@ const yeniId = () => `y${Date.now()}-${sayac++}`;
 export default function TalepFormu({
   talep,
   tedarikciler,
+  havuz: ornekHavuz,
   kutuphane,
 }: {
   talep: Talep;
   tedarikciler: Tedarikci[];
+  havuz: HavuzFirma[];
   kutuphane: KutuphaneUrunu[];
 }) {
   const yeni = talep.id === "yeni";
+  const { liste, havuz, listemde, ekle } = useTedarikcilerim(tedarikciler, ornekHavuz);
   const [baslik, setBaslik] = useState(talep.baslik);
   const [kategori, setKategori] = useState(talep.kategoriAnahtar);
   const [kalemler, setKalemler] = useState<Kalem[]>(talep.kalemler);
@@ -37,16 +39,32 @@ export default function TalepFormu({
   const [kutuphaneAcik, setKutuphaneAcik] = useState(false);
   const [excel, setExcel] = useState<string | null>(null);
   const [secili, setSecili] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(talep.davetliler.map((id) => [id, true])),
+    yeni
+      ? otomatikSecim(tedarikciler.map((t) => ({ ...t, grup: t.grup ?? "ana" })), talep.kategoriAnahtar)
+      : Object.fromEntries(talep.davetliler.map((id) => [id, true])),
   );
+  // Havuzdan bu talebe davet edilen, listenizde olmayan firmalar
+  const [havuzDavet, setHavuzDavet] = useState<Record<string, boolean>>({});
   const [ayarlar, setAyarlar] = useState({ pdf: true, kendiDosya: true, doviz: true });
 
+  const GRUP_SIRA = { ana: 0, yedek: 1, deneme: 2 };
   const kategoriTedarikci = useMemo(
-    () => tedarikciler.filter((t) => t.kategori.includes(kategori)),
-    [tedarikciler, kategori],
+    () =>
+      liste
+        .filter((t) => t.kategori.includes(kategori) || (!yeni && talep.davetliler.includes(t.id)))
+        .sort((a, b) => GRUP_SIRA[a.grup ?? "ana"] - GRUP_SIRA[b.grup ?? "ana"] || b.siparisSayisi - a.siparisSayisi),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [liste, kategori],
   );
-  const kategoriAd = KATEGORILER.find((k) => k.anahtar === kategori)?.ad ?? talep.kategori;
+  // Ortak havuzda bu kategoride olup listenizde olmayan, otellerin en yüksek puan verdiği firmalar
+  const havuzOneri = havuz
+    .filter((f) => f.kategori.includes(kategori) && !listemde(f.id))
+    .sort((a, b) => b.platformPuan - a.platformPuan || b.otelSayisi - a.otelSayisi)
+    .slice(0, 4);
+  const havuzSecili = havuzOneri.filter((f) => havuzDavet[f.id]);
+  const kategoriAd = KATEGORILER[kategori] ?? talep.kategori;
   const seciliListe = kategoriTedarikci.filter((t) => secili[t.id]);
+  const davetSayisi = seciliListe.length + havuzSecili.length;
   const muadilKalemler = kalemler.flatMap((k, i) => (k.sart === "muadil" && !k.bagliKalem ? [i + 1] : []));
   const adim = gonderildi ? 3 : onaylandi ? 2 : 1;
   const adimlar = [
@@ -69,10 +87,19 @@ export default function TalepFormu({
 
   const kategoriDegistir = (yeniKat: string) => {
     setKategori(yeniKat);
-    setSecili(Object.fromEntries(tedarikciler.filter((t) => t.kategori.includes(yeniKat)).map((t) => [t.id, true])));
+    setSecili(otomatikSecim(liste, yeniKat));
+    setHavuzDavet({});
   };
 
-  const eksik = !baslik.trim() || kalemler.some((k) => !k.ad.trim() || !(k.miktar > 0)) || seciliListe.length === 0;
+  const gonder = () => {
+    // Havuzdan davet edilen firmalar "Deneme" sınıfıyla listenize eklenir.
+    for (const f of havuzSecili) ekle(f, [kategori], "deneme");
+    setSecili((s) => ({ ...s, ...Object.fromEntries(havuzSecili.map((f) => [f.id, true])) }));
+    setHavuzDavet({});
+    setGonderildi(true);
+  };
+
+  const eksik = !baslik.trim() || kalemler.some((k) => !k.ad.trim() || !(k.miktar > 0)) || davetSayisi === 0;
 
   return (
     <>
@@ -359,20 +386,20 @@ export default function TalepFormu({
 
           <section className="kart kart-ic" aria-labelledby="ted">
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-              <h2 id="ted">Kayıtlı tedarikçiler · {kategoriAd}</h2>
+              <h2 id="ted">Tedarikçilerim · {kategoriAd}</h2>
               {yeni ? (
                 <label className="alan" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   Kategori
                   <select value={kategori} onChange={(e) => kategoriDegistir(e.target.value)}>
-                    {KATEGORILER.map((k) => (
-                      <option key={k.anahtar} value={k.anahtar}>
-                        {k.ad}
+                    {Object.entries(KATEGORILER).map(([anahtar, ad]) => (
+                      <option key={anahtar} value={anahtar}>
+                        {ad}
                       </option>
                     ))}
                   </select>
                 </label>
               ) : (
-                <span className="soluk" style={{ fontSize: 13 }}>Bu kategoride kayıtlı firmalarınız otomatik seçildi</span>
+                <span className="soluk" style={{ fontSize: 13 }}>Ana ve yedek firmalarınız otomatik seçilir</span>
               )}
             </div>
             <div className="cift-kolon">
@@ -387,12 +414,48 @@ export default function TalepFormu({
                   <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <b>{t.ad}</b>
                     <span className="soluk" style={{ fontSize: 12 }}>
-                      {t.sehir} · {t.siparisSayisi} sipariş{t.sonSiparis ? ` · son: ${t.sonSiparis}` : ""}
+                      {GRUPLAR[t.grup ?? "ana"]} · {t.sehir} · {t.siparisSayisi} sipariş{t.sonSiparis ? ` · son: ${t.sonSiparis}` : ""}
                     </span>
                   </span>
                 </button>
               ))}
+              {kategoriTedarikci.length === 0 && <span className="soluk">Bu kategoride listenizde firma yok; havuzdan davet edebilirsiniz.</span>}
             </div>
+            {havuzOneri.length > 0 && !gonderildi && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid #e3e5e0", paddingTop: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                  <h3 style={{ margin: 0, fontSize: 15 }}>Ortak havuzdan öneriler</h3>
+                  <Link href="/havuz" style={{ fontSize: 13, fontWeight: 600 }}>
+                    Tüm havuz →
+                  </Link>
+                </div>
+                <span className="soluk" style={{ fontSize: 13 }}>
+                  Listenizde olmayan, bu kategoride başka otellerin çalıştığı firmalar. Davet ettiğiniz firma gönderimde listenize
+                  &ldquo;Deneme&rdquo; olarak eklenir.
+                </span>
+                <div className="cift-kolon">
+                  {havuzOneri.map((f) => (
+                    <button
+                      key={f.id}
+                      className="secim-kart"
+                      aria-pressed={!!havuzDavet[f.id]}
+                      onClick={() => setHavuzDavet((s) => ({ ...s, [f.id]: !s[f.id] }))}
+                    >
+                      <span className="secim-kutu">{havuzDavet[f.id] ? "✓" : ""}</span>
+                      <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <b>
+                          {f.ad}
+                          {f.dogrulanmis && <span className="rozet rozet-birebir" style={{ marginLeft: 6, fontSize: 11 }}>Doğrulanmış</span>}
+                        </b>
+                        <span className="soluk" style={{ fontSize: 12 }}>
+                          {f.sehir} · {f.otelSayisi} otel{f.platformPuan ? ` · puan ${f.platformPuan.toLocaleString("tr-TR")}` : ""}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="kart kart-ic" aria-labelledby="kosul">
@@ -425,7 +488,13 @@ export default function TalepFormu({
           <h2 id="ozet">Gönderim özeti</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div className="satir"><span>Kalem</span><span>{kalemler.length}</span></div>
-            <div className="satir"><span>Tedarikçi</span><span>{seciliListe.length}</span></div>
+            <div className="satir">
+              <span>Tedarikçi</span>
+              <span>
+                {davetSayisi}
+                {havuzSecili.length > 0 && ` (${havuzSecili.length} havuzdan)`}
+              </span>
+            </div>
             <div className="satir">
               <span>Muadil</span>
               <span>{muadilKalemler.length ? `Kabul (${muadilKalemler.join(", ")}. kalem)` : "Kabul edilmiyor"}</span>
@@ -450,8 +519,8 @@ export default function TalepFormu({
               Yönetici onayına gönder
             </button>
           ) : (
-            <button className="btn btn-parlak" disabled={eksik || gonderildi} onClick={() => setGonderildi(true)}>
-              {gonderildi ? "Gönderildi" : `${seciliListe.length} tedarikçiye gönder`}
+            <button className="btn btn-parlak" disabled={eksik || gonderildi} onClick={gonder}>
+              {gonderildi ? "Gönderildi" : `${davetSayisi} tedarikçiye gönder`}
             </button>
           )}
           {eksik && <span style={{ fontSize: 12, color: "#f0c9a6" }}>Başlık, tüm kalemlerin adı/miktarı ve en az bir tedarikçi gerekli.</span>}
