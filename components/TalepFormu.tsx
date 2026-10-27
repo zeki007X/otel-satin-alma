@@ -261,6 +261,18 @@ export default function TalepFormu({
                           <input type="number" min={1} value={k.miktar} onChange={(e) => kalemGuncelle(i, { miktar: Number(e.target.value) })} />
                         </label>
                       </div>
+                      <label className="alan" style={{ width: "calc(100% - 22px)", marginLeft: 22 }}>
+                        <span>
+                          Açıklama <span className="soluk" style={{ fontWeight: 400 }}>(isteğe bağlı)</span>
+                        </span>
+                        <textarea
+                          rows={2}
+                          value={k.aciklama ?? ""}
+                          onChange={(e) => kalemGuncelle(i, { aciklama: e.target.value })}
+                          placeholder="ör. renk, ölçü, kullanım yeri, teknik not. Tedarikçi teklif formunda görür."
+                          style={{ resize: "vertical", minHeight: 64, padding: "10px 12px", font: "inherit", fontWeight: 400, border: "1px solid #c9cfc8", borderRadius: 10 }}
+                        />
+                      </label>
                       <div style={{ display: "flex", gap: 12, alignItems: "center", width: "100%", justifyContent: "flex-end" }}>
                         {kalemler.length > 1 && (
                           <button
@@ -286,6 +298,7 @@ export default function TalepFormu({
                         <span className="mono soluk">{i + 1}</span>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           <b>{k.ad}</b>
+                          {k.aciklama?.trim() && <span style={{ fontSize: 13 }}>{k.aciklama}</span>}
                           <span className="soluk" style={{ fontSize: 13 }}>
                             {k.marka ? `Marka: ${k.marka} · ` : ""}Birim: {k.birim} · Miktar: <b style={{ color: "#15202b" }}>{k.miktar.toLocaleString("tr-TR")}</b>
                             {" · "}
