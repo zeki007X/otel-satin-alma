@@ -16,6 +16,7 @@ import {
   yeniSiparisNo,
   type Siparis,
 } from "@/lib/siparis";
+import { teklifleriBirlestir, useYuklenenTeklifler } from "@/lib/yuklenenTeklif";
 
 type Mod = { tur: "enIyi" } | { tur: "tedarikci"; id: string } | { tur: "elle"; secim: Record<string, string> };
 
@@ -31,13 +32,15 @@ type Hucre = {
 
 export default function Karsilastirma({
   talep,
-  teklifler,
+  teklifler: ornekTeklifler,
   tedarikciler,
 }: {
   talep: Talep;
   teklifler: Teklif[];
   tedarikciler: Tedarikci[];
 }) {
+  const { yuklenen } = useYuklenenTeklifler(talep.id);
+  const teklifler = teklifleriBirlestir(ornekTeklifler, yuklenen);
   const { kararlar } = useMuadilKararlari();
   const { sartlar } = useKalemSartlari();
   const [mod, setMod] = useState<Mod>({ tur: "enIyi" });

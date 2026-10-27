@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { GRUPLAR, KATEGORILER, type HavuzFirma, type Kalem, type KutuphaneUrunu, type Ozellik, type Talep, type Tedarikci } from "@/lib/data";
 import { useTedarikcilerim } from "@/lib/tedarikci";
+import { DosyaOkunamadi, dosyaOku } from "@/lib/dosyaOku";
 
 // Yeni talepte kategorideki ana ve yedek firmalar otomatik seçilir; denemeler elle seçilir.
 const otomatikSecim = (liste: Tedarikci[], kategori: string) =>
@@ -37,7 +38,7 @@ export default function TalepFormu({
   const [onaylandi, setOnaylandi] = useState(!yeni);
   const [gonderildi, setGonderildi] = useState(false);
   const [kutuphaneAcik, setKutuphaneAcik] = useState(false);
-  const [excel, setExcel] = useState<string | null>(null);
+  const [dosyaDurum, setDosyaDurum] = useState<{ tur: "okunuyor" | "hata" | "tamam"; mesaj: string } | null>(null);
   const [secili, setSecili] = useState<Record<string, boolean>>(() =>
     yeni
       ? otomatikSecim(tedarikciler.map((t) => ({ ...t, grup: t.grup ?? "ana" })), talep.kategoriAnahtar)
@@ -83,6 +84,37 @@ export default function TalepFormu({
     setKalemler((ks) => [...ks, k]);
     if (!k.ad) setDuzen((d) => ({ ...d, [k.id]: true }));
     setKutuphaneAcik(false);
+  };
+
+  // İhtiyaç listesini Excel/PDF/CSV'den kalemlere çevirir
+  const listeYukle = async (dosya: File | undefined) => {
+    if (!dosya) return;
+    setDosyaDurum({ tur: "okunuyor", mesaj: `${dosya.name} okunuyor…` });
+    try {
+      const o = await dosyaOku(dosya);
+      const yeniler: Kalem[] = o.satirlar.map((x) => ({
+        id: yeniId(),
+        ad: x.ad,
+        marka: x.marka,
+        kod: x.kod,
+        aciklama: x.aciklama,
+        birim: x.birim ?? "adet",
+        miktar: x.miktar != null && x.miktar > 0 ? x.miktar : 1,
+        sart: "birebir",
+      }));
+      const kontrol = o.satirlar.flatMap((x, i) => (x.miktar == null || !(x.miktar > 0) ? [yeniler[i].id] : []));
+      // Tek boş kalem varsa onun yerine geçer, yoksa listenin sonuna eklenir
+      setKalemler((ks) => (ks.length === 1 && !ks[0].ad.trim() ? yeniler : [...ks, ...yeniler]));
+      setDuzen((d) => ({ ...d, ...Object.fromEntries(kontrol.map((id) => [id, true])) }));
+      setDosyaDurum({
+        tur: "tamam",
+        mesaj:
+          `${o.dosya} dosyasından ${yeniler.length} kalem eklendi.` +
+          (kontrol.length ? ` ${kontrol.length} kalemde miktar okunamadı, 1 yazıldı; açık duran kalemleri kontrol edin.` : " Kalemleri ve miktarları kontrol edin."),
+      });
+    } catch (e) {
+      setDosyaDurum({ tur: "hata", mesaj: e instanceof DosyaOkunamadi ? e.message : "Dosya okunurken beklenmeyen bir hata oldu." });
+    }
   };
 
   const kategoriDegistir = (yeniKat: string) => {
@@ -165,12 +197,16 @@ export default function TalepFormu({
               </h2>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 <label className="btn btn-cizgi btn-kucuk" style={{ position: "relative" }}>
-                  Mevcut Excel formunu yükle
+                  {dosyaDurum?.tur === "okunuyor" ? "Okunuyor…" : "Excel / PDF listesinden al"}
                   <input
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls,.csv,.pdf"
+                    aria-label="İhtiyaç listesini Excel veya PDF dosyasından al"
                     style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-                    onChange={(e) => setExcel(e.target.files?.[0]?.name ?? null)}
+                    onChange={(e) => {
+                      void listeYukle(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
                   />
                 </label>
                 <div className="acilir">
@@ -219,12 +255,12 @@ export default function TalepFormu({
               </div>
             </div>
 
-            {excel && (
-              <div className="bilgi" style={{ margin: "14px 20px 0" }} role="status">
-                <span>
-                  <b>{excel}</b> alındı. Excel formunu okuyup kalemlere çevirme sonraki sürümde geliyor; şimdilik kalemleri kütüphaneden
-                  ya da elle ekleyin.
-                </span>
+            {dosyaDurum && dosyaDurum.tur !== "okunuyor" && (
+              <div className={`bilgi${dosyaDurum.tur === "tamam" ? " basari" : ""}`} style={{ margin: "14px 20px 0" }} role="status">
+                <span style={dosyaDurum.tur === "hata" ? { color: "#8a3b10" } : undefined}>{dosyaDurum.mesaj}</span>
+                <button className="yazi-link" style={{ marginLeft: "auto", fontSize: 12 }} onClick={() => setDosyaDurum(null)}>
+                  Kapat
+                </button>
               </div>
             )}
 

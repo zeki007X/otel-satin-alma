@@ -19,7 +19,7 @@ Otellerin teklif toplama sürecini tek ekrana alan platformun ilk sürümü (Nex
 | `/onay` | Onay akışı: mali işler müdürü, 150.000 ₺ üstünde genel müdür onayı; onayla / reddet (gerekçeli) |
 | `/siparisler` | Siparişler: onaylananı tedarikçiye gönder, teslim al |
 
-Örnek veri `lib/data.ts` içindedir; demo "şimdi"si `BUGUN` sabitidir (27 Ekim 2026). Döviz kuru örnek değerdir (`KUR`). Muadil "kabul / uygun değil" kararları şimdilik tarayıcıda (localStorage) saklanır. Karşılaştırmadaki "Onaya gönder" seçime göre tedarikçi başına sipariş oluşturur; siparişler ve onay kararları şimdilik tarayıcıda (localStorage) tutulur. Menüde "yakında" yazan Raporlar sonraki adımdır.
+Örnek veri `lib/data.ts` içindedir; demo "şimdi"si `BUGUN` sabitidir (27 Ekim 2026). Döviz kuru örnek değerdir (`KUR`). Muadil "kabul / uygun değil" kararları şimdilik tarayıcıda (localStorage) saklanır. Karşılaştırmadaki "Onaya gönder" seçime göre tedarikçi başına sipariş oluşturur; siparişler ve onay kararları şimdilik tarayıcıda (localStorage) tutulur. Excel (.xlsx), CSV ve PDF dosyaları tarayıcıda okunur (`lib/dosyaOku.ts`; sunucuya gönderilmez): talep formunda ihtiyaç listesi kalemlere, gelen teklifler ekranında tedarikçi teklifi talep kalemleriyle eşleştirilir. Emin olunamayan alanlar sarı gösterilir, kullanıcı onaylamadan teklif karşılaştırmaya girmez. Taranmış (resim) PDF ve eski .xls okunmaz. Menüde "yakında" yazan Raporlar sonraki adımdır.
 
 ## Geliştirme
 

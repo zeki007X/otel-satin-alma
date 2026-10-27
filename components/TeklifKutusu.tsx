@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { paraYaz, tl, tlFiyat, type Talep, type Tedarikci, type Teklif } from "@/lib/data";
+import { DosyaOkunamadi, dosyaOku, type OkunanDosya } from "@/lib/dosyaOku";
+import { teklifleriBirlestir, useYuklenenTeklifler } from "@/lib/yuklenenTeklif";
+import TeklifDosyaInceleme from "./TeklifDosyaInceleme";
 
 const KANAL: Record<Teklif["kanal"], string> = { portal: "PORTAL", xlsx: "XLSX", pdf: "PDF", eposta: "E-POSTA" };
 
 export default function TeklifKutusu({
   talep,
-  teklifler,
+  teklifler: ornekTeklifler,
   tedarikciler,
   ilkSecim,
 }: {
@@ -17,6 +20,8 @@ export default function TeklifKutusu({
   tedarikciler: Tedarikci[];
   ilkSecim?: string;
 }) {
+  const { yuklenen, kaydet, sil } = useYuklenenTeklifler(talep.id);
+  const teklifler = teklifleriBirlestir(ornekTeklifler, yuklenen);
   const ad = (id: string) => tedarikciler.find((t) => t.id === id)?.ad ?? id;
   const cevapsiz = talep.davetliler.filter((id) => !teklifler.some((q) => q.tedarikciId === id));
   // Varsayılan: dosyadan okunan ilk PDF (en çok okuma gerektiren durum), yoksa ilk teklif.
@@ -29,7 +34,20 @@ export default function TeklifKutusu({
   // "Düzelt" ile elle yapılan düzeltmeler (demo: yalnız bu oturumda)
   const [duzeltme, setDuzeltme] = useState<Record<string, Partial<Teklif>>>({});
   const [duzeltiliyor, setDuzeltiliyor] = useState(false);
-  const [yuklenen, setYuklenen] = useState<string | null>(null);
+  const [okunan, setOkunan] = useState<OkunanDosya | null>(null);
+  const [okuma, setOkuma] = useState<{ durum: "bos" | "okunuyor" | "hata" | "eklendi"; mesaj?: string }>({ durum: "bos" });
+
+  const dosyaSecildi = async (dosya: File | undefined) => {
+    if (!dosya) return;
+    setOkuma({ durum: "okunuyor", mesaj: dosya.name });
+    setOkunan(null);
+    try {
+      setOkunan(await dosyaOku(dosya));
+      setOkuma({ durum: "bos" });
+    } catch (e) {
+      setOkuma({ durum: "hata", mesaj: e instanceof DosyaOkunamadi ? e.message : "Dosya okunurken beklenmeyen bir hata oldu." });
+    }
+  };
 
   const ham = teklifler.find((x) => x.tedarikciId === secim);
   const q = ham ? { ...ham, ...duzeltme[ham.tedarikciId] } : undefined;
@@ -49,6 +67,7 @@ export default function TeklifKutusu({
 
   const sec = (id: string) => {
     setSecim(id);
+    setOkunan(null);
     setDuzeltiliyor(false);
   };
 
@@ -110,19 +129,52 @@ export default function TeklifKutusu({
             ))}
           </div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-            <label className="yukle" style={{ position: "relative" }}>
-              Dosyayı sürükle bırak veya yükle
-              <input type="file" accept=".xlsx,.xls,.pdf,.csv" onChange={(e) => setYuklenen(e.target.files?.[0]?.name ?? null)} />
+            <label
+              className="yukle"
+              style={{ position: "relative", flexDirection: "column", gap: 2 }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                void dosyaSecildi(e.dataTransfer.files?.[0]);
+              }}
+            >
+              {okuma.durum === "okunuyor" ? "Okunuyor…" : "Teklif dosyasını sürükle bırak veya yükle"}
+              <span className="soluk" style={{ fontSize: 11, fontWeight: 400 }}>Excel (.xlsx), PDF veya CSV</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.pdf,.csv"
+                disabled={okuma.durum === "okunuyor"}
+                onChange={(e) => {
+                  void dosyaSecildi(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
             </label>
-            {yuklenen && (
-              <span className="soluk" style={{ fontSize: 12 }} role="status">
-                {yuklenen} alındı. Otomatik okuma bir sonraki sürümde; bu demo örnek dosyaları gösterir.
-              </span>
-            )}
+            <span role="status" style={{ fontSize: 12 }}>
+              {okuma.durum === "hata" && <span style={{ color: "#8a3b10" }}>{okuma.mesaj}</span>}
+              {okuma.durum === "eklendi" && <span style={{ color: "#0f5f57" }}>{okuma.mesaj}</span>}
+            </span>
           </div>
         </section>
 
-        {!q && secim && (
+        {okunan && (
+          <TeklifDosyaInceleme
+            key={okunan.dosya + okunan.satirlar.length}
+            talep={talep}
+            okunan={okunan}
+            tedarikciler={tedarikciler}
+            onVazgec={() => setOkunan(null)}
+            onKaydet={(t) => {
+              kaydet(t);
+              setOkunan(null);
+              setSecim(t.tedarikciId);
+              setDuzeltiliyor(false);
+              setOkuma({ durum: "eklendi", mesaj: `${ad(t.tedarikciId)} teklifi eklendi; karşılaştırma tablosunda yer alıyor.` });
+            }}
+          />
+        )}
+
+        {!okunan && !q && secim && (
           <section className="kart kart-ic" style={{ gridColumn: "span 2" }}>
             <h2>{ad(secim)} henüz cevap vermedi</h2>
             <p className="soluk">Son teklif tarihi {talep.sonTarih}. Hatırlatma, tedarikçiye kişisel teklif linkiyle birlikte gider.</p>
@@ -137,7 +189,7 @@ export default function TeklifKutusu({
           </section>
         )}
 
-        {q && (
+        {!okunan && q && (
           <>
             <section className="kart kart-ic" aria-labelledby="orj">
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, alignItems: "baseline" }}>
@@ -246,6 +298,11 @@ export default function TeklifKutusu({
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 18px" }}>
                 <span className="soluk" style={{ fontSize: 13 }}>{q.not ?? "Tüm alanlar okundu."}</span>
+                {yuklenen.some((y) => y.tedarikciId === q.tedarikciId) && (
+                  <button className="yazi-link" style={{ alignSelf: "flex-start", color: "#8a3b10", fontSize: 13 }} onClick={() => sil(q.tedarikciId)}>
+                    Yüklenen dosyayı kaldır
+                  </button>
+                )}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button className="btn btn-cizgi" aria-pressed={duzeltiliyor} onClick={() => setDuzeltiliyor((d) => !d)}>
                     {duzeltiliyor ? "Düzeltmeyi bitir" : "Düzelt"}
